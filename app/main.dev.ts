@@ -12,6 +12,7 @@ import path from 'path';
 import { app, BrowserWindow } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
+import { menubar } from 'menubar';
 import MenuBuilder from './menu';
 
 export default class AppUpdater {
@@ -96,6 +97,39 @@ const createWindow = async () => {
   new AppUpdater();
 };
 
+const createMenubar = async () => {
+  if (
+    process.env.NODE_ENV === 'development' ||
+    process.env.DEBUG_PROD === 'true'
+  ) {
+    await installExtensions();
+  }
+
+  let mb = menubar({
+    index: `file://${__dirname}/app.html`,
+    tooltip: 'Transmission Buddy',
+    browserWindow: {
+      transparent: false,
+      alwaysOnTop: false,
+      width: 1024,
+      height: 728,
+      webPreferences:
+      process.env.NODE_ENV === 'development' || process.env.E2E_BUILD === 'true'
+        ? {
+            nodeIntegration: true
+          }
+        : {
+            preload: path.join(__dirname, 'dist/renderer.prod.js')
+          }
+    },
+  });
+  mb.on('after-create-window', () => {
+    mb.window.webContents.openDevTools({ mode: 'undocked' });
+  });
+  // eslint-disable-next-line
+  new AppUpdater();
+};
+
 /**
  * Add event listeners...
  */
@@ -108,7 +142,7 @@ app.on('window-all-closed', () => {
   }
 });
 
-app.on('ready', createWindow);
+app.on('ready', createMenubar);
 
 app.on('activate', () => {
   // On macOS it's common to re-create a window in the app when the
